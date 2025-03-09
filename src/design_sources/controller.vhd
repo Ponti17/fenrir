@@ -1,3 +1,18 @@
+/*
+---------------------------------------------------------------------------------------------------
+    Aarhus University (AU, Denmark)
+---------------------------------------------------------------------------------------------------
+
+    File: controller.vhd
+    Description: Controller for 8x6 SNN.
+
+    Author(s):
+        - A. Pedersen, Aarhus University
+        - A. Cherencq, Aarhus University
+
+---------------------------------------------------------------------------------------------------
+*/
+
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
