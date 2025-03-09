@@ -24,150 +24,103 @@ use ieee.numeric_std.all;
 
 entity controller is
     port (
+        -- control
         clk             : in  std_logic;
-        ready           : out std_logic;                        -- ready signal for data
+        nRst            : in  std_logic;                        -- !reset signal (0 = reset)
+        busy            : out std_logic;                        -- busy (1 = busy)
+        data_rdy        : in  std_logic;                        -- data ready (1 = data ready)
 
-        -- data
-        input_vector    : in  std_logic_vector(15 downto 0);    -- 16-bit input
-        input_select    : out std_logic_vector(3 downto 0);     -- 4-bit selector for input
-        data_rdy        : in  std_logic;                        -- data ready signal
+        out0            : out std_logic_vector(31 downto 0);    -- temp general purpose output
+        out1            : out std_logic_vector(31 downto 0);    -- temp general purpose output
+        out2            : out std_logic_vector(31 downto 0);    -- temp general purpose output
 
-        -- neuron and synapse
-        neuron_address  : out std_logic_vector(7 downto 0);     -- 8-bit address for neuron
-        neuron_input    : in  std_logic_vector(31 downto 0);    -- 32-bit input for neuron
-        neuron_we       : out std_logic;                        -- write enable for neuron
-        neuron_update   : out std_logic_vector(31 downto 0);    -- 32-bit update for neuron
+        ibf_addr        : out std_logic_vector(7 downto 0);     -- 8-bit address for input buffer
+        ibf_in          : in  std_logic_vector(31 downto 0);    -- 32-bit input for synapse
 
-        synapse_address : out std_logic_vector(7 downto 0);     -- 8-bit address for synapse
-        synapse_in      : in  std_logic_vector(31 downto 0);    -- 32-bit input for synapse
+        syn_addr        : out std_logic_vector(7 downto 0);     -- 8-bit address for synapse memory
+        syn_in          : in  std_logic_vector(31 downto 0);    -- 32-bit value for synapse memory
 
-        -- signals for active neuron
-        param_leak_str  : out std_logic_vector(6 downto 0);     -- leakage strength parameter
-        param_thr       : out std_logic_vector(11 downto 0);    -- neuron firing threshold parameter
-        state_core      : out std_logic_vector(11 downto 0);    -- core neuron state from SRAM
-        syn_weight      : out std_logic_vector(1 downto 0);     -- synaptic weight
-        syn_event       : out std_logic;                        -- synaptic event trigger
-
-        state_core_next : in  std_logic_vector(11 downto 0);    -- next core neuron state to SRAM
-        spike_out       : in  std_logic                         -- neuron spike event output
+        nrn_addr        : out std_logic_vector(7 downto 0);     -- 8-bit address for neuron memory
+        nrn_in          : in  std_logic_vector(31 downto 0)     -- 32-bit value for neuron memory
     );
 end controller;
 
 architecture Behavioral of controller is
-    signal synapse_counter          : integer := 0;
-    signal neuron_counter           : integer := 0;
-    signal input_row_counter        : integer := 0;
-
-    type main_states is (
+    -- state machine
+    type states is (
         IDLE,
-        READ_REQUEST,
-        WRITE_REQUEST,
-        UPDATE,
+        READ,
         COMPUTE
     );
+    signal cur_state                : states;
 
-    type read_request_substates is (
-        READ_NEURON,
-        READ_SYNAPSE,
-        READ_BOTH
-    );
+    -- input buffer address counter and value
+    signal ibf_addr_cntr            : std_logic_vector(7 downto 0);  -- input buffer address counter
+    signal ibf_val                  : std_logic_vector(31 downto 0); -- input buffer value
 
-    signal MAIN_STATE               : main_states := IDLE;
-    signal REQUEST_STATE            : read_request_substates := READ_BOTH;
+    -- synapse memory address counter and value
+    signal syn_addr_cntr            : std_logic_vector(7 downto 0);  -- synapse memory address counter
+    signal syn_val                  : std_logic_vector(31 downto 0); -- synapse memory value
+
+    -- neuron memory address counter and value
+    signal nrn_addr_cntr            : std_logic_vector(7 downto 0);  -- neuron memory address counter
+    signal nrn_val                  : std_logic_vector(31 downto 0); -- neuron memory value
 
 begin
-    process (clk)
-        variable temp_neuron        : std_logic_vector(31 downto 0);
+    process(clk) is
     begin
         if rising_edge(clk) then
-            case MAIN_STATE is
-                when IDLE =>
-                    if data_rdy = '1' then
-                        -- data is ready, flip the ready signal and start getting neuron and synapse
-                        ready       <= '0';
-                        MAIN_STATE  <= READ_REQUEST;
-                    else
-                        ready       <= '1';
-                    end if;
+            if nRst = '0' then
+                cur_state <= IDLE;
+                -- reset address counters
+                ibf_addr_cntr   <= (others => '0');
+                syn_addr_cntr   <= (others => '0');
+                nrn_addr_cntr   <= (others => '0');
+            else
+                case cur_state is
 
-                when READ_REQUEST =>
-                    -- reading neuron and synapses
-                    case REQUEST_STATE is
-                        when READ_NEURON =>
-                            -- read neuron
-                            neuron_we       <= '0';
-                            neuron_address  <= std_logic_vector(to_unsigned(neuron_counter, 8));
-                            MAIN_STATE      <= UPDATE;
+                    when IDLE =>
+                        -- wait for data_rdy signal
+                        busy <= '0';
+                        -- reset address counters
+                        ibf_addr_cntr   <= (others => '0');
+                        syn_addr_cntr   <= (others => '0');
+                        nrn_addr_cntr   <= (others => '0');
+                        -- start reading if data is ready
+                        if data_rdy = '1' then
+                            cur_state <= READ;
+                            busy <= '1';
+                        end if;
 
-                        when READ_SYNAPSE =>
-                            -- read synapse
-                            if (synapse_counter > 15 and synapse_counter < 32) then
-                                synapse_address <= std_logic_vector(to_unsigned(neuron_counter * 3 + 1, 8));
-                            else
-                                synapse_address <= std_logic_vector(to_unsigned(neuron_counter * 3 + 2, 8));
-                            end if;
-                            MAIN_STATE      <= COMPUTE;
+                    when READ =>
+                        -- set BRAM addresses
+                        ibf_addr    <= ibf_addr_cntr;
+                        syn_addr    <= syn_addr_cntr;
+                        nrn_addr    <= nrn_addr_cntr;
 
-                        when READ_BOTH =>
-                            -- read both neuron and synapse
-                            synapse_address <= std_logic_vector(to_unsigned(neuron_counter * 3, 8));
-                            neuron_address  <= std_logic_vector(to_unsigned(neuron_counter, 8));
-                    end case;
+                        -- read memory (delayed by one cycle)
+                        ibf_val     <= ibf_in;
+                        syn_val     <= syn_in;
+                        nrn_val     <= nrn_in;
 
-                when WRITE_REQUEST =>
-                    -- update neuron
-                    neuron_we           <= '1';
-                    neuron_update       <= temp_neuron;
-                    MAIN_STATE          <= READ_REQUEST;
-                    REQUEST_STATE       <= READ_BOTH;
+                        -- increment address counters
+                        ibf_addr_cntr   <= std_logic_vector( unsigned(ibf_addr_cntr) + 1 );
+                        syn_addr_cntr   <= std_logic_vector( unsigned(syn_addr_cntr) + 1 );
+                        nrn_addr_cntr   <= std_logic_vector( unsigned(nrn_addr_cntr) + 1 );
 
-                when UPDATE =>
-                    -- update internal signals and variables
-                    temp_neuron := neuron_input;
+                        -- compute next neuron state
+                        cur_state <= COMPUTE;
+                    
+                    when COMPUTE =>
+                        -- compute neuron states
+                        out0 <= ibf_val;
+                        out1 <= syn_val;
+                        out2 <= nrn_val;
 
-                when COMPUTE =>
-                    -- main loop
-                    -- update neuron signals from the 32-bit word from neuron BRAM
-                    param_leak_str      <= neuron_input(30 downto 24);
-                    param_thr           <= neuron_input(23 downto 12);
-                    state_core          <= temp_neuron(11 downto 0);
+                        cur_state <= READ;
 
-                    -- extract the synapse weight from the 32-bit word
-                    syn_weight          <= synapse_in(2 * synapse_counter + 1 downto 2 * synapse_counter);
-
-                    -- pass the input bit from the input vector indexed by the synapse counter
-                    syn_event           <= input_vector(synapse_counter - (input_row_counter * 16));
-
-                    -- increment the synapse counter
-                    synapse_counter     <= synapse_counter + 1;
-
-                    -- read the state core from the state_core_next signal
-                    temp_neuron(11 downto 0) := state_core_next;
-
-                    -- check if the neuron has spiked
-                    if spike_out = '1' then
-                        -- handle neuron spike (to be defined)
-                        synapse_counter <= 48;
-                    end if;
-
-                    -- check synapse counter
-                    if synapse_counter = 16 or synapse_counter = 32 then
-                        -- read the following 16 weights and increment the row counter
-                        MAIN_STATE          <= READ_REQUEST;
-                        REQUEST_STATE       <= READ_SYNAPSE;
-                        input_row_counter   <= input_row_counter + 1;
-                        input_select        <= std_logic_vector(to_unsigned(input_row_counter, 4));
-                    elsif synapse_counter = 48 then
-                        -- next neuron
-                        synapse_counter     <= 0;
-                        neuron_counter      <= neuron_counter + 1;
-                        input_row_counter   <= 0;
-                        MAIN_STATE          <= WRITE_REQUEST;
-                    end if;
-
-                when others =>
-                    MAIN_STATE <= IDLE;
-            end case;
+                end case;
+            end if;
         end if;
     end process;
 

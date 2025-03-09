@@ -3,7 +3,7 @@
     Aarhus University (AU, Denmark)
 ---------------------------------------------------------------------------------------------------
 
-    File: synapse_memory.vhd
+    File: neuron_memory.vhd
     Description: Initializing BRAM from an external data file.
 
     Link(s):
@@ -12,7 +12,7 @@
 ---------------------------------------------------------------------------------------------------
 
     Functionality:
-        - Block RAM initialized from external data file (synapse_memory_init.data).
+        - Block RAM initialized from external data file (neuron_memory_init.data).
         - External data must be in bit vector form.
         - The RAM is 256x32 bits.
         - Indexed by an 8-bit address.
@@ -25,7 +25,7 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use std.textio.all;
 
-entity synapse_memory is
+entity neuron_memory is
     port (
         clk  : in  std_logic;
         we   : in  std_logic;
@@ -33,9 +33,9 @@ entity synapse_memory is
         din  : in  std_logic_vector(31 downto 0);
         dout : out std_logic_vector(31 downto 0)
     );
-end synapse_memory;
+end neuron_memory;
 
-architecture syn of synapse_memory is
+architecture syn of neuron_memory is
     type RamType is array (0 to 255) of bit_vector(31 downto 0);
 
     impure function InitRamFromFile(RamFileName : in string) return RamType is
@@ -50,7 +50,7 @@ architecture syn of synapse_memory is
         return RAM;
     end function;
 
-    signal RAM : RamType := InitRamFromFile("synapse_memory_init.data");
+    signal RAM : RamType := InitRamFromFile("data/nrn_init.data");
 
 begin
     process (clk)

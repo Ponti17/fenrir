@@ -3,8 +3,8 @@
     Aarhus University (AU, Denmark)
 ---------------------------------------------------------------------------------------------------
 
-    File: input_buf.vhd
-    Description: Input buffer of BRAM where preprocessed input data is stored.
+    File: synapse_memory.vhd
+    Description: Initializing BRAM from an external data file.
 
     Link(s):
         - https://docs.amd.com/r/en-US/ug901-vivado-synthesis
@@ -12,7 +12,7 @@
 ---------------------------------------------------------------------------------------------------
 
     Functionality:
-        - Block RAM initialized from external data file (input_buf_init.data).
+        - Block RAM initialized from external data file (synapse_memory_init.data).
         - External data must be in bit vector form.
         - The RAM is 256x32 bits.
         - Indexed by an 8-bit address.
@@ -25,7 +25,7 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use std.textio.all;
 
-entity neuron_memory is
+entity synapse_memory is
     port (
         clk  : in  std_logic;
         we   : in  std_logic;
@@ -33,9 +33,9 @@ entity neuron_memory is
         din  : in  std_logic_vector(31 downto 0);
         dout : out std_logic_vector(31 downto 0)
     );
-end neuron_memory;
+end synapse_memory;
 
-architecture syn of neuron_memory is
+architecture syn of synapse_memory is
     type RamType is array (0 to 255) of bit_vector(31 downto 0);
 
     impure function InitRamFromFile(RamFileName : in string) return RamType is
@@ -50,7 +50,7 @@ architecture syn of neuron_memory is
         return RAM;
     end function;
 
-    signal RAM : RamType := InitRamFromFile("input_buf_init.data");
+    signal RAM : RamType := InitRamFromFile("data/syn_init.data");
 
 begin
     process (clk)
