@@ -48,8 +48,9 @@ end controller;
 architecture Behavioral of controller is
     -- state machine
     type states is (
-        IDLE,
-        READ,
+        IDLE,       -- idle state
+        ITRT_NRN,   -- iterate neurons
+        ITRT_SYN,   -- iterate synapses
         COMPUTE
     );
     signal cur_state                : states;
@@ -70,6 +71,7 @@ begin
     process(clk) is
     begin
         if rising_edge(clk) then
+            -- reset state machine
             if nRst = '0' then
                 cur_state <= IDLE;
                 -- reset address counters
@@ -77,6 +79,7 @@ begin
                 syn_addr_cntr   <= (others => '0');
                 nrn_addr_cntr   <= (others => '0');
             else
+                -- state machine
                 case cur_state is
 
                     when IDLE =>
@@ -88,25 +91,35 @@ begin
                         nrn_addr_cntr   <= (others => '0');
                         -- start reading if data is ready
                         if data_rdy = '1' then
-                            cur_state <= READ;
+                            cur_state <= ITRT_NRN;
                             busy <= '1';
                         end if;
 
-                    when READ =>
+                    when ITRT_NRN =>
+                        -- set BRAM addresse
+                        nrn_addr    <= nrn_addr_cntr;
+
+                        -- read memory (delayed by one cycle)
+                        nrn_val     <= nrn_in;
+
+                        -- increment address counter
+                        nrn_addr_cntr   <= std_logic_vector( unsigned(nrn_addr_cntr) + 1 );
+
+                        -- iterate synapses for current neuron
+                        cur_state <= ITRT_SYN;
+
+                    when ITRT_SYN =>
                         -- set BRAM addresses
                         ibf_addr    <= ibf_addr_cntr;
                         syn_addr    <= syn_addr_cntr;
-                        nrn_addr    <= nrn_addr_cntr;
 
                         -- read memory (delayed by one cycle)
                         ibf_val     <= ibf_in;
                         syn_val     <= syn_in;
-                        nrn_val     <= nrn_in;
 
                         -- increment address counters
                         ibf_addr_cntr   <= std_logic_vector( unsigned(ibf_addr_cntr) + 1 );
                         syn_addr_cntr   <= std_logic_vector( unsigned(syn_addr_cntr) + 1 );
-                        nrn_addr_cntr   <= std_logic_vector( unsigned(nrn_addr_cntr) + 1 );
 
                         -- compute next neuron state
                         cur_state <= COMPUTE;
@@ -117,7 +130,7 @@ begin
                         out1 <= syn_val;
                         out2 <= nrn_val;
 
-                        cur_state <= READ;
+                        cur_state <= ITRT_SYN;
 
                 end case;
             end if;
