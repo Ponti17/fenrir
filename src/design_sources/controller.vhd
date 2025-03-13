@@ -109,6 +109,7 @@ begin
 
                         -- increment address counter
                         nrn_addr_cntr   <= std_logic_vector( unsigned(nrn_addr_cntr) + 1 );
+                        ibf_addr_cntr   <= (others => '0');
 
                         -- if last neuron, go to IDLE
                         if (unsigned(nrn_addr_cntr) = 48) then
