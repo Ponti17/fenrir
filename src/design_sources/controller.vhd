@@ -25,34 +25,35 @@ use ieee.numeric_std.all;
 entity controller is
     port (
         -- control
-        clk             : in  std_logic;
-        nRst            : in  std_logic;                        -- !reset signal (0 = reset)
-        busy            : out std_logic;                        -- busy (1 = busy)
-        data_rdy        : in  std_logic;                        -- data ready (1 = data ready)
+        clk                 : in  std_logic;
+        nRst                : in  std_logic;                        -- !reset signal (0 = reset)
+        busy                : out std_logic;                        -- busy (1 = busy)
+        data_rdy            : in  std_logic;                        -- data ready (1 = data ready)
 
         -- outputs
-        out0            : out std_logic_vector(31 downto 0);    -- temp general purpose output
-        out1            : out std_logic_vector(31 downto 0);    -- temp general purpose output
-        out2            : out std_logic_vector(31 downto 0);    -- temp general purpose output
+        out0                : out std_logic_vector(31 downto 0);    -- temp general purpose output
+        out1                : out std_logic_vector(31 downto 0);    -- temp general purpose output
+        out2                : out std_logic_vector(31 downto 0);    -- temp general purpose output
 
         -- memory
-        ibf_addr        : out std_logic_vector(7 downto 0);     -- 8-bit address for input buffer
-        ibf_in          : in  std_logic_vector(31 downto 0);    -- 32-bit input for synapse
+        ibf_addr            : out std_logic_vector(7 downto 0);     -- 8-bit address for input buffer
+        ibf_in              : in  std_logic_vector(31 downto 0);    -- 32-bit input for synapse
 
-        syn_addr        : out std_logic_vector(7 downto 0);     -- 8-bit address for synapse memory
-        syn_in          : in  std_logic_vector(31 downto 0);    -- 32-bit value for synapse memory
+        syn_addr            : out std_logic_vector(7 downto 0);     -- 8-bit address for synapse memory
+        syn_in              : in  std_logic_vector(31 downto 0);    -- 32-bit value for synapse memory
 
-        nrn_addr        : out std_logic_vector(7 downto 0);     -- 8-bit address for neuron memory
-        nrn_in          : in  std_logic_vector(31 downto 0)     -- 32-bit value for neuron memory
+        nrn_addr            : out std_logic_vector(7 downto 0);     -- 8-bit address for neuron memory
+        nrn_in              : in  std_logic_vector(31 downto 0);    -- 32-bit value for neuron memory
 
         -- lif logic
-        param_leak_str  : out std_logic_vector(6 downto 0);     -- leakage stength parameter
-        param_thr       : out std_logic_vector(11 downto 0);    -- neuron firing threshold parameter
+        param_leak_str      : out std_logic_vector(6 downto 0);     -- leakage stength parameter
+        param_thr           : out std_logic_vector(11 downto 0);    -- neuron firing threshold parameter
 
-        state_core      : out std_logic_vector(11 downto 0);    -- core neuron state from SRAM
+        state_core          : out std_logic_vector(11 downto 0);    -- core neuron state from SRAM
+        state_core_next    : in std_logic_vector(11 downto 0);     -- next core neuron state to SRAM
 
-        syn_weight      : out std_logic_vector(3 downto 0);     -- synaptic weight
-        syn_event       : out std_logic;                        -- synaptic event trigger
+        syn_weight          : out std_logic_vector(3 downto 0);     -- synaptic weight
+        syn_event           : out std_logic;                        -- synaptic event trigger
     );
 end controller;
 
