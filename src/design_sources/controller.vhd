@@ -125,7 +125,7 @@ begin
                         ibf_addr_cntr   <= std_logic_vector( unsigned(ibf_addr_cntr) + 1 );
 
                         -- compute next neuron state
-                        if (unsigned(syn_addr_cntr) /= 0 and (unsigned(syn_addr_cntr) - 1) mod 8 = 0) then
+                        if (unsigned(syn_addr_cntr) /= 0 and (unsigned(syn_addr_cntr) - 1) mod 4 = 0) then
                             cur_state <= COMPUTE;
                         else
                             cur_state <= ITRT_SYN;
@@ -142,7 +142,7 @@ begin
                         -- after 48 synapses, write neuron memory
                         if (unsigned(syn_addr_cntr) = 48) then
                             cur_state <= WRITE_NRN;
-                        elsif (unsigned(syn_addr_cntr) /= 0 and unsigned(syn_addr_cntr) mod 8 = 0) then
+                        elsif (unsigned(syn_addr_cntr) /= 0 and unsigned(syn_addr_cntr) mod 4 = 0) then
                             cur_state <= ITRT_IBF;
                         else
                             cur_state <= COMPUTE;
