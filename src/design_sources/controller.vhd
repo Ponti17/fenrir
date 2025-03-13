@@ -111,7 +111,7 @@ begin
                         nrn_addr_cntr   <= std_logic_vector( unsigned(nrn_addr_cntr) + 1 );
 
                         -- if last neuron, go to IDLE
-                        if (unsigned(nrn_addr_cntr) = 47 + 1) then
+                        if (unsigned(nrn_addr_cntr) = 48) then
                             cur_state <= IDLE;
                         else
                             cur_state <= ITRT_IBF;
@@ -140,10 +140,10 @@ begin
 
                         -- for every 8th synapse, iterate the input buffer
                         -- after 48 synapses, write neuron memory
-                        if (unsigned(syn_addr_cntr) /= 0 and unsigned(syn_addr_cntr) mod 8 = 0) then
-                            cur_state <= ITRT_IBF;
-                        elsif (unsigned(syn_addr_cntr) = 47 + 1) then
+                        if (unsigned(syn_addr_cntr) = 48) then
                             cur_state <= WRITE_NRN;
+                        elsif (unsigned(syn_addr_cntr) /= 0 and unsigned(syn_addr_cntr) mod 8 = 0) then
+                            cur_state <= ITRT_IBF;
                         else
                             cur_state <= COMPUTE;
                         end if;
