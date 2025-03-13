@@ -56,7 +56,8 @@ architecture Behavioral of controller is
         ITRT_NRN,   -- iterate neurons
         ITRT_IBF,   -- iterate input buffer
         ITRT_SYN,   -- iterate synapses
-        COMPUTE
+        COMPUTE,    -- compute neuron
+        WRITE_NRN   -- write neuron memory
     );
     signal cur_state                : states;
 
@@ -104,12 +105,17 @@ begin
                     when ITRT_NRN =>
                         -- set BRAM address
                         nrn_addr        <= nrn_addr_cntr;
+                        nrn_we          <= '0';
 
                         -- increment address counter
                         nrn_addr_cntr   <= std_logic_vector( unsigned(nrn_addr_cntr) + 1 );
 
-                        -- iterate synapses for current neuron
-                        cur_state <= ITRT_IBF;
+                        -- if last neuron, go to IDLE
+                        if (unsigned(nrn_addr_cntr) = 47 + 1) then
+                            cur_state <= IDLE;
+                        else
+                            cur_state <= ITRT_IBF;
+                        end if;
 
                     when ITRT_IBF =>
                         -- set BRAM address
@@ -119,7 +125,11 @@ begin
                         ibf_addr_cntr   <= std_logic_vector( unsigned(ibf_addr_cntr) + 1 );
 
                         -- compute next neuron state
-                        cur_state <= ITRT_SYN;
+                        if (unsigned(syn_addr_cntr) /= 0 and (unsigned(syn_addr_cntr) - 1) mod 8 = 0) then
+                            cur_state <= COMPUTE;
+                        else
+                            cur_state <= ITRT_SYN;
+                        end if;
 
                     when ITRT_SYN =>
                         -- set BRAM address
@@ -128,8 +138,22 @@ begin
                         -- increment address counter
                         syn_addr_cntr   <= std_logic_vector( unsigned(syn_addr_cntr) + 1 );
 
+                        -- for every 8th synapse, iterate the input buffer
+                        -- after 48 synapses, write neuron memory
+                        if (unsigned(syn_addr_cntr) /= 0 and unsigned(syn_addr_cntr) mod 8 = 0) then
+                            cur_state <= ITRT_IBF;
+                        elsif (unsigned(syn_addr_cntr) = 47 + 1) then
+                            cur_state <= WRITE_NRN;
+                        else
+                            cur_state <= COMPUTE;
+                        end if;
+
+                    when WRITE_NRN =>
+                        -- write neuron memory
+                        nrn_we  <= '1';
+
                         -- compute next neuron state
-                        cur_state <= COMPUTE;
+                        cur_state <= ITRT_NRN;
 
                     when COMPUTE =>
                         -- compute neuron states
