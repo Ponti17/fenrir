@@ -44,16 +44,8 @@ entity controller is
 
         nrn_addr            : out std_logic_vector(7 downto 0);     -- 8-bit address for neuron memory
         nrn_in              : in  std_logic_vector(31 downto 0);    -- 32-bit value for neuron memory
-
-        -- lif logic
-        param_leak_str      : out std_logic_vector(6 downto 0);     -- leakage stength parameter
-        param_thr           : out std_logic_vector(11 downto 0);    -- neuron firing threshold parameter
-
-        state_core          : out std_logic_vector(11 downto 0);    -- core neuron state from SRAM
-        state_core_next    : in std_logic_vector(11 downto 0);     -- next core neuron state to SRAM
-
-        syn_weight          : out std_logic_vector(3 downto 0);     -- synaptic weight
-        syn_event           : out std_logic;                        -- synaptic event trigger
+        nrn_out             : out std_logic_vector(31 downto 0);    -- 32-bit value from neuron memory
+        nrn_we              : out std_logic                         -- write enable for neuron memory
     );
 end controller;
 
@@ -62,6 +54,7 @@ architecture Behavioral of controller is
     type states is (
         IDLE,       -- idle state
         ITRT_NRN,   -- iterate neurons
+        ITRT_IBF,   -- iterate input buffer
         ITRT_SYN,   -- iterate synapses
         COMPUTE
     );
@@ -86,6 +79,7 @@ begin
             -- reset state machine
             if nRst = '0' then
                 cur_state <= IDLE;
+                nrn_we    <= '0';
                 -- reset address counters
                 ibf_addr_cntr   <= (others => '0');
                 syn_addr_cntr   <= (others => '0');
@@ -108,29 +102,30 @@ begin
                         end if;
 
                     when ITRT_NRN =>
-                        -- set BRAM addresse
-                        nrn_addr    <= nrn_addr_cntr;
-
-                        -- read memory (delayed by one cycle)
-                        nrn_val     <= nrn_in;
+                        -- set BRAM address
+                        nrn_addr        <= nrn_addr_cntr;
 
                         -- increment address counter
                         nrn_addr_cntr   <= std_logic_vector( unsigned(nrn_addr_cntr) + 1 );
 
                         -- iterate synapses for current neuron
+                        cur_state <= ITRT_IBF;
+
+                    when ITRT_IBF =>
+                        -- set BRAM address
+                        ibf_addr        <= ibf_addr_cntr;
+
+                        -- increment address counter
+                        ibf_addr_cntr   <= std_logic_vector( unsigned(ibf_addr_cntr) + 1 );
+
+                        -- compute next neuron state
                         cur_state <= ITRT_SYN;
 
                     when ITRT_SYN =>
-                        -- set BRAM addresses
-                        ibf_addr    <= ibf_addr_cntr;
-                        syn_addr    <= syn_addr_cntr;
+                        -- set BRAM address
+                        syn_addr        <= syn_addr_cntr;
 
-                        -- read memory (delayed by one cycle)
-                        ibf_val     <= ibf_in;
-                        syn_val     <= syn_in;
-
-                        -- increment address counters
-                        ibf_addr_cntr   <= std_logic_vector( unsigned(ibf_addr_cntr) + 1 );
+                        -- increment address counter
                         syn_addr_cntr   <= std_logic_vector( unsigned(syn_addr_cntr) + 1 );
 
                         -- compute next neuron state
@@ -138,9 +133,9 @@ begin
 
                     when COMPUTE =>
                         -- compute neuron states
-                        out0 <= ibf_val;
-                        out1 <= syn_val;
-                        out2 <= nrn_val;
+                        out0 <= nrn_in;
+                        out1 <= ibf_in;
+                        out2 <= syn_in;
 
                         cur_state <= ITRT_SYN;
 
