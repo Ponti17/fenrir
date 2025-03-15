@@ -38,6 +38,19 @@ architecture behavior of controller_tb is
     signal nrn_din              : std_logic_vector(31 downto 0);    -- Data input to memory
     signal nrn_dout             : std_logic_vector(31 downto 0);    -- Data output from memory
 
+    -- lif neuron
+    signal param_leak_str       : std_logic_vector(6 downto 0);     -- leakage stength parameter
+    signal param_thr            : std_logic_vector(11 downto 0);    -- neuron firing threshold parameter
+
+    signal state_core           : std_logic_vector(11 downto 0);    -- core neuron state from SRAM
+    signal state_core_next      : std_logic_vector(11 downto 0);    -- next core neuron state to SRAM
+
+    signal syn_weight           : std_logic_vector(3 downto 0);     -- synaptic weight
+    signal syn_event            : std_logic;                        -- synaptic event trigger
+    signal time_ref             : std_logic;                        -- time reference event trigger
+
+    signal spike_out            : std_logic;                        -- neuron spike event output
+
     -- Clock period
     constant clk_period : time := 10 ns;
 
@@ -63,7 +76,16 @@ begin
             nrn_addr        => nrn_addr,
             nrn_in          => nrn_dout,
             nrn_out         => nrn_din,
-            nrn_we          => nrn_we
+            nrn_we          => nrn_we,
+
+            param_leak_str  => param_leak_str,
+            param_thr       => param_thr,
+            state_core      => state_core,
+            state_core_next => state_core_next,
+            syn_weight      => syn_weight,
+            syn_event       => syn_event,
+            time_ref        => time_ref,
+            spike_out       => spike_out
         );
 
     -- instantiate memory modules with unique names

@@ -45,7 +45,20 @@ entity controller is
         nrn_addr            : out std_logic_vector(7 downto 0);     -- 8-bit address for neuron memory
         nrn_in              : in  std_logic_vector(31 downto 0);    -- 32-bit value for neuron memory
         nrn_out             : out std_logic_vector(31 downto 0);    -- 32-bit value from neuron memory
-        nrn_we              : out std_logic                         -- write enable for neuron memory
+        nrn_we              : out std_logic;                        -- write enable for neuron memory
+
+        -- lif neuron
+        param_leak_str      : out std_logic_vector(6 downto 0);     -- leakage stength parameter
+        param_thr           : out std_logic_vector(11 downto 0);    -- neuron firing threshold parameter
+
+        state_core          : out std_logic_vector(11 downto 0);    -- core neuron state from SRAM
+        state_core_next     : in std_logic_vector(11 downto 0);     -- next core neuron state to SRAM
+
+        syn_weight          : out std_logic_vector(3 downto 0);     -- synaptic weight
+        syn_event           : out std_logic;                        -- synaptic event trigger
+        time_ref            : out std_logic;                        -- time reference event trigger
+
+        spike_out           : in std_logic                          -- neuron spike event output
     );
 end controller;
 
