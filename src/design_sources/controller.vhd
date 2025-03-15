@@ -88,6 +88,10 @@ architecture Behavioral of controller is
 
 begin
     process(clk) is
+
+    variable state_core_var         : std_logic_vector(11 downto 0);
+    variable state_core_next_var    : std_logic_vector(11 downto 0);
+
     begin
         if rising_edge(clk) then
             -- reset state machine
@@ -174,6 +178,14 @@ begin
                         out0 <= nrn_in;
                         out1 <= ibf_in;
                         out2 <= syn_in;
+
+                        -- load neuron parameters and state
+                        param_leak_str <= nrn_in(6 downto 0);
+                        param_thr      <= nrn_in(17 downto 6);
+                        state_core     <= nrn_in(29 downto 18);
+
+                        -- set synapse weight
+                        syn_weight     <= syn_in;
 
                         cur_state <= ITRT_SYN;
 
