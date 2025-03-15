@@ -1,7 +1,6 @@
 # Ignore python cache and virtual environment
 **/.snnenv/
 **/.venv
-**/data/
 **/cache/
 **/__pycache__/
 
