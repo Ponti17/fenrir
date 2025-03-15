@@ -1,5 +1,9 @@
+# Ignore python cache and virtual environment
 **/.snnenv/
-**/__pycache__/
+**/.venv
 **/data/
 **/cache/
-**/.venv
+**/__pycache__/
+
+# Ignore the Vivado project directory
+vivado/
