@@ -88,8 +88,20 @@ begin
             spike_out       => spike_out
         );
 
+    lif_neuron: entity work.lif_neuron
+            port map (
+                param_leak_str  => param_leak_str,
+                param_thr       => param_thr,
+                state_core      => state_core,
+                state_core_next => state_core_next,
+                syn_weight      => syn_weight,
+                syn_event       => syn_event,
+                time_ref        => time_ref,
+                spike_out       => spike_out
+            );
+
     -- instantiate memory modules with unique names
-    ibf_memory: entity work.input_memeory
+    ibf_memory: entity work.input_memory
         port map (
             clk         => clk,
             we          => ibf_we,
