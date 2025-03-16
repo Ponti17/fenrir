@@ -176,6 +176,10 @@ begin
                     when WRITE_NRN =>
                         -- write neuron memory
                         nrn_we  <= '1';
+                        nrn_out(31 downto 30) <= "00";
+                        nrn_out(29 downto 18) <= state_core_i;
+                        nrn_out(17 downto 6)  <= param_thr;
+                        nrn_out(6 downto 0)   <= param_leak_str;
 
                         -- compute next neuron state
                         cur_state <= ITRT_NRN;
