@@ -91,6 +91,7 @@ begin
     process(clk) is
 
     variable syn_idx        : integer range 0 to 7;                 -- synapse block index counter
+    variable tot_syn_idx    : integer range 0 to 47;                -- total synapse index counter
     variable state_core_i   : std_logic_vector(11 downto 0);        -- core neuron state
 
     begin
@@ -133,6 +134,7 @@ begin
                         param_leak_str  <= nrn_in(6 downto 0);
                         param_thr       <= nrn_in(17 downto 6);
                         state_core_i    := nrn_in(29 downto 18);
+                        tot_syn_idx     := 0;
 
                         -- if last neuron, go to IDLE
                         if (unsigned(nrn_addr_cntr) = 48) then
@@ -163,13 +165,9 @@ begin
                         syn_addr_cntr   <= std_logic_vector( unsigned(syn_addr_cntr) + 1 );
 
                         -- for every 8th synapse, iterate the input buffer
-                        -- after 48 synapses, write neuron memory
-                        if (unsigned(syn_addr_cntr) = 48) then
-                            cur_state <= WRITE_NRN;
-                        elsif (unsigned(syn_addr_cntr) /= 0 and unsigned(syn_addr_cntr) mod 4 = 0) then
+                        if (unsigned(syn_addr_cntr) /= 0 and unsigned(syn_addr_cntr) mod 4 = 0) then
                             cur_state <= ITRT_IBF;
                         else
-                            syn_idx   := 0;
                             cur_state <= COMPUTE;
                         end if;
 
@@ -193,7 +191,9 @@ begin
                         state_core      <= state_core_i;
                         time_ref        <= '0';
 
-                        if syn_idx < 8 then
+                        if tot_syn_idx = 47 then
+                            cur_state <= WRITE_NRN;
+                        elsif syn_idx < 8 then
                             syn_weight  <= syn_in( (syn_idx * 4) + 3 downto (syn_idx * 4) );
                             syn_event   <= ibf_in(syn_idx);
                             syn_idx     := syn_idx + 1;
@@ -202,6 +202,8 @@ begin
                             syn_idx     := 0;
                             cur_state   <= ITRT_SYN;
                         end if;
+
+                        tot_syn_idx     := tot_syn_idx + 1;
 
                     when UPDT_STATE =>
                         state_core_i := state_core_next;
