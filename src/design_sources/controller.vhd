@@ -196,7 +196,7 @@ begin
                             cur_state <= WRITE_NRN;
                         elsif syn_idx < 8 then
                             syn_weight  <= syn_in( (syn_idx * 4) + 3 downto (syn_idx * 4) );
-                            syn_event   <= ibf_in(syn_idx);
+                            syn_event   <= ibf_in(tot_syn_idx mod 32);
                             syn_idx     := syn_idx + 1;
                             cur_state   <= UPDT_STATE;
                         else
