@@ -93,6 +93,7 @@ begin
     variable syn_idx        : integer range 0 to 7;                 -- synapse block index counter
     variable tot_syn_idx    : integer range 0 to 47;                -- total synapse index counter
     variable state_core_i   : std_logic_vector(11 downto 0);        -- core neuron state
+    variable spike_out_cnt  : integer range 0 to 255;               -- spike out counter
 
     begin
         if rising_edge(clk) then
@@ -206,6 +207,11 @@ begin
                         tot_syn_idx     := tot_syn_idx + 1;
 
                     when UPDT_STATE =>
+                        -- count spikes
+                        if spike_out = '1' then
+                            spike_out_cnt := spike_out_cnt + 1;
+                        end if;
+
                         state_core_i := state_core_next;
                         cur_state <= COMPUTE;
 
