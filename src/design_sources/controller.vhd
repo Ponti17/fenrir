@@ -39,7 +39,7 @@ entity controller is
         ibf_addr            : out std_logic_vector(7 downto 0);     -- 8-bit address for input buffer
         ibf_in              : in  std_logic_vector(31 downto 0);    -- 32-bit input for synapse
 
-        syn_addr            : out std_logic_vector(7 downto 0);     -- 8-bit address for synapse memory
+        syn_addr            : out std_logic_vector(15 downto 0);    -- 8-bit address for synapse memory
         syn_in              : in  std_logic_vector(31 downto 0);    -- 32-bit value for synapse memory
 
         nrn_addr            : out std_logic_vector(7 downto 0);     -- 8-bit address for neuron memory
@@ -80,7 +80,7 @@ architecture Behavioral of controller is
     signal ibf_val          : std_logic_vector(31 downto 0);        -- input buffer value
 
     -- synapse memory address counter and value
-    signal syn_addr_cntr    : std_logic_vector(7 downto 0);         -- synapse memory address counter
+    signal syn_addr_cntr    : std_logic_vector(15 downto 0);         -- synapse memory address counter
     signal syn_val          : std_logic_vector(31 downto 0);        -- synapse memory value
 
     -- neuron memory address counter and value

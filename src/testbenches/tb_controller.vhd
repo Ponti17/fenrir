@@ -19,7 +19,7 @@ architecture behavior of controller_tb is
     signal ibf_addr        : std_logic_vector(7 downto 0);
     signal ibf_in          : std_logic_vector(31 downto 0);
 
-    signal syn_addr        : std_logic_vector(7 downto 0);
+    signal syn_addr        : std_logic_vector(15 downto 0);
     signal syn_in          : std_logic_vector(31 downto 0);
 
     signal nrn_addr        : std_logic_vector(7 downto 0);

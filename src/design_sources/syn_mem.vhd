@@ -29,14 +29,14 @@ entity synapse_memory is
     port (
         clk  : in  std_logic;
         we   : in  std_logic;
-        addr : in  std_logic_vector(7 downto 0);
+        addr : in  std_logic_vector(15 downto 0);
         din  : in  std_logic_vector(31 downto 0);
         dout : out std_logic_vector(31 downto 0)
     );
 end synapse_memory;
 
 architecture syn of synapse_memory is
-    type RamType is array (0 to 255) of bit_vector(31 downto 0);
+    type RamType is array (0 to 65535) of bit_vector(31 downto 0);
 
     impure function InitRamFromFile(RamFileName : in string) return RamType is
         FILE RamFile         : text is in RamFileName;
