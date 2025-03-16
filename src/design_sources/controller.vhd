@@ -70,27 +70,28 @@ architecture Behavioral of controller is
         ITRT_IBF,   -- iterate input buffer
         ITRT_SYN,   -- iterate synapses
         COMPUTE,    -- compute neuron
+        UPDT_STATE, -- update neuron state
         WRITE_NRN   -- write neuron memory
     );
     signal cur_state                : states;
 
     -- input buffer address counter and value
-    signal ibf_addr_cntr            : std_logic_vector(7 downto 0);  -- input buffer address counter
-    signal ibf_val                  : std_logic_vector(31 downto 0); -- input buffer value
+    signal ibf_addr_cntr    : std_logic_vector(7 downto 0);         -- input buffer address counter
+    signal ibf_val          : std_logic_vector(31 downto 0);        -- input buffer value
 
     -- synapse memory address counter and value
-    signal syn_addr_cntr            : std_logic_vector(7 downto 0);  -- synapse memory address counter
-    signal syn_val                  : std_logic_vector(31 downto 0); -- synapse memory value
+    signal syn_addr_cntr    : std_logic_vector(7 downto 0);         -- synapse memory address counter
+    signal syn_val          : std_logic_vector(31 downto 0);        -- synapse memory value
 
     -- neuron memory address counter and value
-    signal nrn_addr_cntr            : std_logic_vector(7 downto 0);  -- neuron memory address counter
-    signal nrn_val                  : std_logic_vector(31 downto 0); -- neuron memory value
+    signal nrn_addr_cntr    : std_logic_vector(7 downto 0);         -- neuron memory address counter
+    signal nrn_val          : std_logic_vector(31 downto 0);        -- neuron memory value
 
 begin
     process(clk) is
 
-    variable state_core_var         : std_logic_vector(11 downto 0);
-    variable state_core_next_var    : std_logic_vector(11 downto 0);
+    variable syn_idx        : integer range 0 to 7;                 -- synapse block index counter
+    variable state_core_i   : std_logic_vector(11 downto 0);        -- core neuron state
 
     begin
         if rising_edge(clk) then
@@ -128,6 +129,11 @@ begin
                         nrn_addr_cntr   <= std_logic_vector( unsigned(nrn_addr_cntr) + 1 );
                         ibf_addr_cntr   <= (others => '0');
 
+                        -- load neuron parameters and state
+                        param_leak_str  <= nrn_in(6 downto 0);
+                        param_thr       <= nrn_in(17 downto 6);
+                        state_core_i    := nrn_in(29 downto 18);
+
                         -- if last neuron, go to IDLE
                         if (unsigned(nrn_addr_cntr) = 48) then
                             cur_state <= IDLE;
@@ -163,6 +169,7 @@ begin
                         elsif (unsigned(syn_addr_cntr) /= 0 and unsigned(syn_addr_cntr) mod 4 = 0) then
                             cur_state <= ITRT_IBF;
                         else
+                            syn_idx   := 0;
                             cur_state <= COMPUTE;
                         end if;
 
@@ -175,19 +182,26 @@ begin
 
                     when COMPUTE =>
                         -- compute neuron states
-                        out0 <= nrn_in;
                         out1 <= ibf_in;
                         out2 <= syn_in;
 
-                        -- load neuron parameters and state
-                        param_leak_str <= nrn_in(6 downto 0);
-                        param_thr      <= nrn_in(17 downto 6);
-                        state_core     <= nrn_in(29 downto 18);
+                        -- compute next neuron state
+                        state_core      <= state_core_i;
+                        time_ref        <= '0';
 
-                        -- set synapse weight
-                        syn_weight     <= syn_in;
+                        if syn_idx < 8 then
+                            syn_weight  <= syn_in( (syn_idx * 4) + 3 downto (syn_idx * 4) );
+                            syn_event   <= ibf_in(syn_idx);
+                            syn_idx     := syn_idx + 1;
+                            cur_state   <= UPDT_STATE;
+                        else
+                            syn_idx     := 0;
+                            cur_state   <= ITRT_SYN;
+                        end if;
 
-                        cur_state <= ITRT_SYN;
+                    when UPDT_STATE =>
+                        state_core_i := state_core_next;
+                        cur_state <= COMPUTE;
 
                 end case;
             end if;
