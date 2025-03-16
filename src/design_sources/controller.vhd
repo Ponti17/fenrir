@@ -136,6 +136,7 @@ begin
                         param_thr       <= nrn_in(17 downto 6);
                         state_core_i    := nrn_in(29 downto 18);
                         tot_syn_idx     := 0;
+                        spike_out_cnt   := 0;
 
                         -- if last neuron, go to IDLE
                         if (unsigned(nrn_addr_cntr) = 48) then
@@ -186,7 +187,6 @@ begin
                     when COMPUTE =>
                         -- compute neuron states
                         out1 <= ibf_in;
-                        out2 <= syn_in;
 
                         -- compute next neuron state
                         state_core      <= state_core_i;
@@ -211,6 +211,8 @@ begin
                         if spike_out = '1' then
                             spike_out_cnt := spike_out_cnt + 1;
                         end if;
+
+                        out2 <= std_logic_vector(to_unsigned(spike_out_cnt, 32));
 
                         state_core_i := state_core_next;
                         cur_state <= COMPUTE;
