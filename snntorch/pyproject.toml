@@ -35,6 +35,7 @@ optuna          = "^4.1.0"
 snntorch        = "^0.9.1"
 ffmpeg          = "^1.4"
 tonic           = "^1.6.0"
+brevitas        = "^0.11.0"
 
 [[tool.poetry.source]]
 name            = "torch-gpu"
