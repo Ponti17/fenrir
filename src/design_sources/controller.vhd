@@ -75,17 +75,10 @@ architecture Behavioral of controller is
     );
     signal cur_state                : states;
 
-    -- input buffer address counter and value
-    signal ibf_addr_cntr    : std_logic_vector(7 downto 0);         -- input buffer address counter
-    signal ibf_val          : std_logic_vector(31 downto 0);        -- input buffer value
-
-    -- synapse memory address counter and value
-    signal syn_addr_cntr    : std_logic_vector(15 downto 0);         -- synapse memory address counter
-    signal syn_val          : std_logic_vector(31 downto 0);        -- synapse memory value
-
-    -- neuron memory address counter and value
-    signal nrn_addr_cntr    : std_logic_vector(7 downto 0);         -- neuron memory address counter
-    signal nrn_val          : std_logic_vector(31 downto 0);        -- neuron memory value
+    -- memory address counters
+    signal ibf_addr_cntr    : std_logic_vector(7 downto 0);         -- input buffer
+    signal syn_addr_cntr    : std_logic_vector(15 downto 0);        -- synapses
+    signal nrn_addr_cntr    : std_logic_vector(7 downto 0);         -- neurons
 
 begin
     process(clk) is
@@ -97,37 +90,60 @@ begin
 
     begin
         if rising_edge(clk) then
-            -- reset state machine
+            ----------------------------------------------------------------------
+            -- RESET
+            -- Address counters are forcibly reset and state is set to IDLE
+            ----------------------------------------------------------------------
             if nRst = '0' then
-                cur_state <= IDLE;
-                nrn_we    <= '0';
-                -- reset address counters
-                ibf_addr_cntr   <= (others => '0');
-                syn_addr_cntr   <= (others => '0');
-                nrn_addr_cntr   <= (others => '0');
+                nrn_we        <= '0';
+                ibf_addr_cntr <= (others => '0');
+                syn_addr_cntr <= (others => '0');
+                nrn_addr_cntr <= (others => '0');
+                cur_state     <= IDLE;
             else
-                -- state machine
                 case cur_state is
-
+                    ----------------------------------------------------------------------
+                    -- STATE             : IDLE
+                    -- PREDECESSOR STATES: RESET, ITRT_NRN
+                    --
+                    -- Description:
+                    -- Address counters are reset. Awaiting data to start iterating.
+                    --
+                    -- Transition Conditions:
+                    --  -> ITRT_NRN: Input buffer is ready and data_rdy is high.
+                    ----------------------------------------------------------------------
                     when IDLE =>
                         -- wait for data_rdy signal
                         busy <= '0';
                         -- reset address counters
-                        ibf_addr_cntr   <= (others => '0');
-                        syn_addr_cntr   <= (others => '0');
-                        nrn_addr_cntr   <= (others => '0');
+                        ibf_addr_cntr <= (others => '0');
+                        syn_addr_cntr <= (others => '0');
+                        nrn_addr_cntr <= (others => '0');
                         -- start reading if data is ready
                         if data_rdy = '1' then
                             cur_state <= ITRT_NRN;
                             busy <= '1';
                         end if;
 
+                    ----------------------------------------------------------------------
+                    -- STATE             : ITRT_NRN
+                    -- PREDECESSOR STATES: IDLE, WRITE_NRN
+                    --
+                    -- Description:
+                    -- The neuron memory address is read and incremented.
+                    -- The input buffer address is reset to 0.
+                    -- 
+                    -- Neuron parameters are loaded into the LIF logic, and the potential
+                    -- is stored in a process variable. The syn_idx counter is reset to 0.
+                    --
+                    -- Transition Conditions:
+                    --  -> IDLE    : If the last neuron is reached, go to IDLE.
+                    --  -> ITRT_IBF: Otherwise, the state is set to ITRT_IBF.
+                    ----------------------------------------------------------------------
                     when ITRT_NRN =>
-                        -- set BRAM address
                         nrn_addr        <= nrn_addr_cntr;
                         nrn_we          <= '0';
 
-                        -- increment address counter
                         nrn_addr_cntr   <= std_logic_vector( unsigned(nrn_addr_cntr) + 1 );
                         ibf_addr_cntr   <= (others => '0');
 
@@ -136,7 +152,6 @@ begin
                         param_thr       <= nrn_in(17 downto 6);
                         state_core_i    := nrn_in(29 downto 18);
                         tot_syn_idx     := 0;
-                        spike_out_cnt   := 0;
 
                         -- if last neuron, go to IDLE
                         if (unsigned(nrn_addr_cntr) = 48) then
@@ -145,49 +160,68 @@ begin
                             cur_state <= ITRT_IBF;
                         end if;
 
+                    ----------------------------------------------------------------------
+                    -- STATE             : ITRT_IBF
+                    -- PREDECESSOR STATES: ITRT_NRN, ITRT_SYN
+                    --
+                    -- Description:
+                    -- The input buffer address is read and incremented. The buffer
+                    -- contains 16 2-bit values for negative, positive and no spike.
+                    --
+                    -- For every 16 synapses (2 addresses), the ITRT_SYN state will switch
+                    -- to ITRT_IBF state to iterate the input buffer.
+                    -- 
+                    -- Transition Conditions:
+                    --  -> COMPUTE : If we came from ITRT_SYN (syn_addr is a multiple of 2).
+                    --  -> ITRT_SYN: If we are iterating for the first time.
+                    ----------------------------------------------------------------------
                     when ITRT_IBF =>
-                        -- set BRAM address
                         ibf_addr        <= ibf_addr_cntr;
-
-                        -- increment address counter
                         ibf_addr_cntr   <= std_logic_vector( unsigned(ibf_addr_cntr) + 1 );
 
-                        -- compute next neuron state
-                        if (unsigned(syn_addr_cntr) /= 0 and (unsigned(syn_addr_cntr) - 1) mod 4 = 0) then
+                        if (unsigned(syn_addr_cntr) /= 0 and (unsigned(syn_addr_cntr) - 1) mod 2 = 0) then
                             cur_state <= COMPUTE;
                         else
                             cur_state <= ITRT_SYN;
                         end if;
 
+                    ----------------------------------------------------------------------
+                    -- STATE             : ITRT_SYN
+                    -- PREDECESSOR STATES: ITRT_IBF, COMPUTE
+                    --
+                    -- Description:
+                    -- The synapse memory address is read and incremented.
+                    -- For every 16th synapse (2 addresses), we switch to ITRT_IBF state,
+                    -- to load the next 32 bits of input buffer data.
+                    -- 
+                    -- Transition Conditions:
+                    --  -> ITRT_IBF: Every 16th synapse.
+                    --  -> COMPUTE : Otherwise, compute the neuron state.
+                    ----------------------------------------------------------------------
                     when ITRT_SYN =>
-                        -- set BRAM address
                         syn_addr        <= syn_addr_cntr;
-
-                        -- increment address counter
                         syn_addr_cntr   <= std_logic_vector( unsigned(syn_addr_cntr) + 1 );
 
-                        -- for every 8th synapse, iterate the input buffer
-                        if (unsigned(syn_addr_cntr) /= 0 and unsigned(syn_addr_cntr) mod 4 = 0) then
+                        if (unsigned(syn_addr_cntr) /= 0 and unsigned(syn_addr_cntr) mod 2 = 0) then
                             cur_state <= ITRT_IBF;
                         else
                             cur_state <= COMPUTE;
                         end if;
 
-                    when WRITE_NRN =>
-                        -- write neuron memory
-                        nrn_we  <= '1';
-                        nrn_out(31 downto 30) <= "00";
-                        nrn_out(29 downto 18) <= state_core_i;
-                        nrn_out(17 downto 6)  <= param_thr;
-                        nrn_out(6 downto 0)   <= param_leak_str;
-
-                        -- compute next neuron state
-                        cur_state <= ITRT_NRN;
-
+                    ----------------------------------------------------------------------
+                    -- STATE             : COMPUTE
+                    -- PREDECESSOR STATES: ITRT_IBF, ITRT_SYN, UPDT_STATE
+                    --
+                    -- Description:
+                    -- The synapse memory address is read and incremented.
+                    -- For every 16th synapse (2 addresses), we switch to ITRT_IBF state,
+                    -- to load the next 32 bits of input buffer data.
+                    -- 
+                    -- Transition Conditions:
+                    --  -> ITRT_IBF: Every 16th synapse.
+                    --  -> COMPUTE : Otherwise, compute the neuron state.
+                    ----------------------------------------------------------------------
                     when COMPUTE =>
-                        -- compute neuron states
-                        out1 <= ibf_in;
-
                         -- compute next neuron state
                         state_core      <= state_core_i;
                         time_ref        <= '0';
@@ -216,6 +250,17 @@ begin
 
                         state_core_i := state_core_next;
                         cur_state <= COMPUTE;
+
+                        when WRITE_NRN =>
+                        -- write neuron memory
+                        nrn_we  <= '1';
+                        nrn_out(31 downto 30) <= "00";
+                        nrn_out(29 downto 18) <= state_core_i;
+                        nrn_out(17 downto 6)  <= param_thr;
+                        nrn_out(6 downto 0)   <= param_leak_str;
+
+                        -- compute next neuron state
+                        cur_state <= ITRT_NRN;
 
                 end case;
             end if;
