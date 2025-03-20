@@ -134,9 +134,9 @@ begin
                         end loop;
                         acc_sum <= acc_sum + par_sum;
 
-                        if syn_idx < 47 then
-                            syn_idx <= syn_idx + 1;
-                            ibf_idx <= ibf_idx + 1;
+                        if syn_idx < 47 - 8 then
+                            syn_idx <= syn_idx + 8;
+                            ibf_idx <= ibf_idx + 8;
                             cur_state <= ITRT_SYN;
                         else
                             cur_state <= UPDT_NRN;
