@@ -76,9 +76,15 @@ architecture Behavioral of controller is
     signal nrn_idx      : integer range 0 to 47 := 0;
     signal syn_idx      : integer range 0 to 47 := 0;
     signal ibf_idx      : integer range 0 to 15 := 0;
+    signal acc_sum      : integer range 0 to 2048 := 0; -- accumulator for neuron potential (0 to 2^11)
 
 begin
     process(clk) is
+
+    variable syn_val : integer range 0 to 15;       -- 2^4
+    variable ibf_val : integer range -1 to 1;       -- positive or negative spikes
+    variable par_sum : integer;                     -- must be high enough
+
     begin
         if rising_edge(clk) then
             if nRst = '0' then
@@ -86,6 +92,7 @@ begin
                 nrn_idx     <= 0;
                 syn_idx     <= 0;
                 ibf_idx     <= 0;
+                acc_sum     <= 0;
                 cur_state   <= IDLE;
             else
                 case cur_state is
@@ -94,6 +101,7 @@ begin
                         nrn_idx <= 0;
                         syn_idx <= 0;
                         ibf_idx <= 0;
+                        acc_sum <= 0;
                         if data_rdy = '1' then
                             cur_state <= ITRT_NRN;
                             busy      <= '1';
@@ -105,6 +113,7 @@ begin
 
                         syn_idx <= 0;
                         ibf_idx <= 0;
+                        acc_sum <= 0;
 
                         cur_state <= ITRT_SYN;
 
@@ -115,6 +124,15 @@ begin
                         cur_state <= COMPUTE;
 
                     when COMPUTE =>
+                        par_sum := 0;
+                        for i in 0 to 7 loop
+                            syn_val := to_integer(unsigned(syn_in(4 * i + 3 downto 4 * i)));
+                            ibf_val := to_integer(signed(ibf_in(i * 2 + 1 downto i * 2)));
+                            par_sum := par_sum + syn_val * ibf_val;
+                        end loop;
+
+                        acc_sum <= acc_sum + par_sum;
+
                         if syn_idx < 47 then
                             syn_idx <= syn_idx + 1;
                             ibf_idx <= ibf_idx + 1;
