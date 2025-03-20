@@ -69,6 +69,7 @@ architecture Behavioral of controller is
         ITRT_NRN,   -- iterate neurons
         ITRT_SYN,   -- iterate synapses
         COMPUTE,    -- compute neuron
+        UPDT_NRN,   -- update neuron using LIF model
         WRITE_NRN   -- write neuron memory
     );
     signal cur_state    : states;
@@ -81,9 +82,10 @@ architecture Behavioral of controller is
 begin
     process(clk) is
 
-    variable syn_val : integer range 0 to 15;       -- 2^4
-    variable ibf_val : integer range -1 to 1;       -- positive or negative spikes
-    variable par_sum : integer;                     -- must be high enough
+    variable syn_val            : integer range 0 to 15;    -- 2^4
+    variable ibf_val            : integer range -1 to 1;    -- positive or negative spikes
+    variable par_sum            : integer;                  -- must be high enough
+    variable state_core_i       : integer;
 
     begin
         if rising_edge(clk) then
@@ -130,7 +132,6 @@ begin
                             ibf_val := to_integer(signed(ibf_in(i * 2 + 1 downto i * 2)));
                             par_sum := par_sum + syn_val * ibf_val;
                         end loop;
-
                         acc_sum <= acc_sum + par_sum;
 
                         if syn_idx < 47 then
@@ -138,10 +139,31 @@ begin
                             ibf_idx <= ibf_idx + 1;
                             cur_state <= ITRT_SYN;
                         else
-                            cur_state <= WRITE_NRN;
+                            cur_state <= UPDT_NRN;
                         end if;
                     
+                    when UPDT_NRN =>
+                        -- update neuron state
+                        param_leak_str <= nrn_in(6 downto 0);
+                        param_thr      <= nrn_in(18 downto 7);
+                        syn_weight     <= (others => '0');
+                        syn_event      <= '0';
+                        time_ref       <= '1';
+
+                        -- write back neuron state
+                        state_core_i   := to_integer(signed(nrn_in(30 downto 19)));
+                        state_core_i   := state_core_i + acc_sum;
+                        state_core     <= std_logic_vector(to_signed(state_core_i, 12));
+
+                        cur_state <= WRITE_NRN;
+
                     when WRITE_NRN =>
+                        nrn_addr <= std_logic_vector(to_unsigned(nrn_idx, 8));
+                        nrn_out(30 downto 19) <= state_core_next(11 downto 0);
+                        nrn_out(18 downto 7)  <= nrn_in(18 downto 7);
+                        nrn_out(6 downto 0)   <= nrn_in(6 downto 0);
+                        nrn_we   <= '1';
+
                         if nrn_idx < 47 then
                             nrn_idx <= nrn_idx + 1;
                             cur_state <= ITRT_NRN;
