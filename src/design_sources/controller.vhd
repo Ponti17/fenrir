@@ -129,7 +129,8 @@ begin
                         par_sum := 0;
                         for i in 0 to 7 loop
                             syn_val := to_integer(unsigned(syn_in(4 * i + 3 downto 4 * i)));
-                            ibf_val := to_integer(signed(ibf_in(i * 2 + 1 downto i * 2)));
+                            -- shitty math required to iterate over 32-bit input buffer of 2-bit values for every 8 synapses
+                            ibf_val := to_integer(signed(ibf_in(i * 2 + 1 + ((ibf_idx mod 16) * 2) downto i * 2 + ((ibf_idx mod 16) * 2))));
                             par_sum := par_sum + syn_val * ibf_val;
                         end loop;
                         acc_sum <= acc_sum + par_sum;
