@@ -110,17 +110,14 @@ begin
 
                     when ITRT_SYN =>
                         syn_addr <= std_logic_vector(to_unsigned(syn_idx / 8, 16));
-
-                        if (syn_idx mod 16 = 0) then
-                            ibf_addr <= std_logic_vector(to_unsigned(ibf_idx, 8));
-                            ibf_idx <= ibf_idx + 1;
-                        end if;
+                        ibf_addr <= std_logic_vector(to_unsigned(ibf_idx / 16, 8));
 
                         cur_state <= COMPUTE;
 
                     when COMPUTE =>
                         if syn_idx < 47 then
                             syn_idx <= syn_idx + 1;
+                            ibf_idx <= ibf_idx + 1;
                             cur_state <= ITRT_SYN;
                         else
                             cur_state <= WRITE_NRN;
