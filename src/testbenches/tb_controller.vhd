@@ -151,6 +151,15 @@ begin
         wait for clk_period;
 
         -- Simulate reading and incrementing address
+        for i in 0 to 1000 loop
+            data_rdy <= '0';
+            wait for clk_period;
+        end loop;
+
+        data_rdy <= '1';
+        wait for clk_period;
+
+        -- Simulate reading and incrementing address
         for i in 0 to 255 loop
             data_rdy <= '0';
             wait for clk_period;
