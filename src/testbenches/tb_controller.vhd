@@ -19,6 +19,9 @@ architecture behavior of controller_tb is
     signal ibf_addr        : std_logic_vector(7 downto 0);
     signal ibf_in          : std_logic_vector(31 downto 0);
 
+    signal out_addr        : std_logic_vector(7 downto 0);
+    signal out_in          : std_logic_vector(31 downto 0);
+
     signal syn_addr        : std_logic_vector(15 downto 0);
     signal syn_in          : std_logic_vector(31 downto 0);
 
@@ -29,6 +32,10 @@ architecture behavior of controller_tb is
     signal ibf_we               : std_logic := '0';                 -- Write enable for memory
     signal ibf_din              : std_logic_vector(31 downto 0);    -- Data input to memory
     signal ibf_dout             : std_logic_vector(31 downto 0);    -- Data output from memory
+
+    signal out_we               : std_logic := '0';                 -- Write enable for memory
+    signal out_din              : std_logic_vector(31 downto 0);    -- Data input to memory
+    signal out_dout             : std_logic_vector(31 downto 0);    -- Data output from memory
 
     signal syn_we               : std_logic := '0';                 -- Write enable for memory
     signal syn_din              : std_logic_vector(31 downto 0);    -- Data input to memory
@@ -70,6 +77,11 @@ begin
             ibf_addr        => ibf_addr,
             ibf_in          => ibf_dout,
 
+            out_addr        => out_addr,
+            out_in          => out_dout,
+            out_out         => out_din,
+            out_we          => out_we,
+
             syn_addr        => syn_addr,
             syn_in          => syn_dout,
 
@@ -108,6 +120,15 @@ begin
             addr        => ibf_addr,
             din         => ibf_din,
             dout        => ibf_dout
+        );
+
+    out_memory: entity work.out_memory
+        port map (
+            clk         => clk,
+            we          => out_we,
+            addr        => out_addr,
+            din         => out_din,
+            dout        => out_dout
         );
 
     syn_memory: entity work.synapse_memory

@@ -39,6 +39,11 @@ entity controller is
         ibf_addr            : out std_logic_vector(7 downto 0);     -- 8-bit address for input buffer
         ibf_in              : in  std_logic_vector(31 downto 0);    -- 32-bit input for synapse
 
+        out_addr            : out std_logic_vector(7 downto 0);     -- 8-bit address for output memory
+        out_in              : in  std_logic_vector(31 downto 0);    -- 32-bit value for output memory
+        out_out             : out std_logic_vector(31 downto 0);    -- 32-bit value from output memory
+        out_we              : out std_logic;                        -- write enable for output memory
+
         syn_addr            : out std_logic_vector(15 downto 0);    -- 8-bit address for synapse memory
         syn_in              : in  std_logic_vector(31 downto 0);    -- 32-bit value for synapse memory
 
@@ -112,6 +117,7 @@ begin
                     when ITRT_NRN =>
                         nrn_addr <= std_logic_vector(to_unsigned(nrn_idx, 8));
                         nrn_we   <= '0';
+                        out_we   <= '0';
 
                         syn_idx <= 0;
                         ibf_idx <= 0;
@@ -156,6 +162,8 @@ begin
                         state_core_i   := state_core_i + acc_sum;
                         state_core     <= std_logic_vector(to_signed(state_core_i, 12));
 
+                        out_addr      <= std_logic_vector(to_unsigned(nrn_idx / 32, 8));
+
                         cur_state <= WRITE_NRN;
 
                     when WRITE_NRN =>
@@ -164,6 +172,10 @@ begin
                         nrn_out(18 downto 7)  <= nrn_in(18 downto 7);
                         nrn_out(6 downto 0)   <= nrn_in(6 downto 0);
                         nrn_we   <= '1';
+
+                        out_we   <= '1';
+                        out_out  <= out_in when spike_out = '0' else
+                                    out_in or (std_logic_vector(to_unsigned(1, 32)) sll (nrn_idx mod 32));
 
                         if nrn_idx < 47 then
                             nrn_idx <= nrn_idx + 1;
