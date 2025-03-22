@@ -73,6 +73,7 @@ architecture Behavioral of controller is
         IDLE,       -- idle state
         ITRT_NRN,   -- iterate neurons
         ITRT_SYN,   -- iterate synapses
+        WAIT_CYC,
         COMPUTE,    -- compute neuron
         UPDT_NRN,   -- update neuron using LIF model
         WRITE_NRN   -- write neuron memory
@@ -81,7 +82,7 @@ architecture Behavioral of controller is
 
     signal nrn_idx      : integer range 0 to 47 := 0;
     signal syn_idx      : integer range 0 to 47 := 0;
-    signal ibf_idx      : integer range 0 to 15 := 0;
+    signal ibf_idx      : integer range 0 to 47 := 0;
     signal acc_sum      : integer range 0 to 2048 := 0; -- accumulator for neuron potential (0 to 2^11)
 
 begin
@@ -129,6 +130,9 @@ begin
                         syn_addr <= std_logic_vector(to_unsigned(syn_idx / 8 + nrn_idx * 6, 16));
                         ibf_addr <= std_logic_vector(to_unsigned(ibf_idx / 16, 8));
 
+                        cur_state <= WAIT_CYC;
+
+                    when WAIT_CYC =>
                         cur_state <= COMPUTE;
 
                     when COMPUTE =>
