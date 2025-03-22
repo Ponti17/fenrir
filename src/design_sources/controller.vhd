@@ -126,7 +126,7 @@ begin
                         cur_state <= ITRT_SYN;
 
                     when ITRT_SYN =>
-                        syn_addr <= std_logic_vector(to_unsigned(syn_idx / 8, 16));
+                        syn_addr <= std_logic_vector(to_unsigned(syn_idx / 8 + nrn_idx * 6, 16));
                         ibf_addr <= std_logic_vector(to_unsigned(ibf_idx / 16, 8));
 
                         cur_state <= COMPUTE;
