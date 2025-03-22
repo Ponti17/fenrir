@@ -117,6 +117,7 @@ begin
 
                     when ITRT_NRN =>
                         nrn_addr <= std_logic_vector(to_unsigned(nrn_idx, 8));
+                        out_addr      <= std_logic_vector(to_unsigned(nrn_idx / 32, 8));
                         nrn_we   <= '0';
                         out_we   <= '0';
 
@@ -165,8 +166,6 @@ begin
                         state_core_i   := to_integer(signed(nrn_in(30 downto 19)));
                         state_core_i   := state_core_i + acc_sum;
                         state_core     <= std_logic_vector(to_signed(state_core_i, 12));
-
-                        out_addr      <= std_logic_vector(to_unsigned(nrn_idx / 32, 8));
 
                         cur_state <= WRITE_NRN;
 
